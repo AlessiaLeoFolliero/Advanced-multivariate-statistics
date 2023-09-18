@@ -1,0 +1,584 @@
+---
+title: "Esame_AMS"
+author: "Alessia Leo Folliero"
+date: "2023-03-29"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+## AMS Project
+
+In this project different aspects of italian regions have been analyzed with the aim of finding some similarities between regions and understand how to improve the inequalities
+
+First step: creation of the dataset:
+
+```{r}
+library(tidyverse)
+library("readxl")
+library(dplyr)
+
+```
+
+First we need to load the data
+
+```{r}
+Servizi_infanzia=read.csv("Diffusione-servizi-infanzia-per-regione.csv", sep=";", header=T)
+Assistenza_domiciliare=read.csv("Assistenza-domiciliare-integrata-anziani.csv",sep=";",header=T)
+Incidenza_disoccupazione_lunga_durata=read.csv("Incidenza-della-disoccupazione-di-lunga-durata-per-regione.csv", sep=";",header=T)
+Incidenza_spesa_Per_R_S=read.csv("Incidenza-spesa-pubblica-per-ricerca-e-sviluppo-sul-PIL-per-regione.csv",sep=";",header=T)
+Grave_depriv_mat=read.csv("Persone-in-condizioni-di-grave-deprivazione-materiale.csv",sep=";",header=T)
+Tasso_crim_org=read.csv("Tasso-di-criminalita-organizzata-e-di-tipo-mafioso-per-regione.csv",sep=";",header=T)
+Tasso_furti_denunc_per_reg=read.csv("Tasso-di-furti-denunciati-per-regione.csv",sep=";",header=T)
+Tasso_di_omicidi_per=read.csv("Tasso-di-omicidi-per-regione.csv",sep=";",header=T)
+Tasso_di_rapine=read.csv("Tasso-di-rapine-denunciate-per-regione.csv",header=T,sep=";")
+Tasso_pove=read_excel("Rischio_poverta.xlsx")
+Tasso_scol=read.csv("Tasso-di-scolarizzazione-superiore-per-regione.csv",header=T,sep=";")
+Popolazione_res=read_excel("Popolazione_residente_per_regione.xlsx")
+
+```
+
+Now we merge the datasets to create our own unique dataset.
+
+```{r}
+ Nuovo_data=left_join(Servizi_infanzia, Assistenza_domiciliare, by='Regione') %>%
+                left_join(., Incidenza_disoccupazione_lunga_durata, by='Regione')%>%
+   left_join(., Incidenza_spesa_Per_R_S, by='Regione')%>%
+   left_join(., Grave_depriv_mat, by='Regione')%>%
+   left_join(., Tasso_crim_org, by='Regione')%>%
+   left_join(., Tasso_furti_denunc_per_reg, by='Regione')%>%
+   left_join(., Tasso_di_omicidi_per, by='Regione')%>%
+   left_join(., Tasso_di_rapine, by='Regione')%>%
+   left_join(., Tasso_scol, by='Regione')%>%
+   left_join(., Tasso_pove, by='Regione')
+   
+ head(Nuovo_data)
+ View(Nuovo_data)
+```
+
+Data exploration:
+
+```{r}
+Nuovo_data=as.data.frame(Nuovo_data)
+summary(Nuovo_data)
+str(Nuovo_data)
+rownames(Nuovo_data)=Nuovo_data$Regione
+dim(Nuovo_data)
+attach(Nuovo_data)
+length(Regione)
+length(Tasso_pove)
+p=ggplot(Nuovo_data, aes(x=reorder(Regione, `Persone a rischio povertà o esclusione sociale`),y=`Persone a rischio povertà o esclusione sociale`, fill=Regione))+
+  geom_bar(stat="identity")+
+  geom_text(aes(label=`Persone a rischio povertà o esclusione sociale`), vjust=0.25)+
+  theme(legend.position="none")+
+  coord_flip()+
+  labs(x="Regions", y="Total people at poverty risk or exclusion", title="Total number of people per region at poverty risk or exclusion")
+p
+
+b=ggplot(Nuovo_data, aes(x=reorder(Regione, Persone.con.grave.deprivazione.materiale),y=Persone.con.grave.deprivazione.materiale,fill=Regione))+
+  geom_bar(stat="identity")+
+  geom_text(aes(label=Persone.con.grave.deprivazione.materiale), vjust=0.25)+
+  theme(legend.position="none",axis.text.x=element_blank())+
+  coord_flip()+
+  labs(x="Regions", y="Total number of people with severe material deprivation", title="Total number of people per region with severe material deprivation")
+b
+
+#bar plot barplot
+colnames(Nuovo_data)
+data_depriv_masch_femm=Nuovo_data%>%
+  pivot_longer(cols=7:8,
+               names_to="variable",
+               values_to="values")
+p <- ggplot(data_depriv_masch_femm, aes(x=reorder(Regione, Persone.con.grave.deprivazione.materiale),y=values, fill = variable)) +
+  geom_bar( stat = "identity")+coord_flip()+
+  theme(legend.position="none",axis.text.x=element_blank())+
+  labs(x="Regions",y="People at deprivation risks", title="Total number of people with material deprivation (Male and Female)")
+p
+
+#Stacked barplot with people at poverty risk
+colnames(Nuovo_data)
+people_pov_risk=Nuovo_data%>%
+  pivot_longer(cols=15:16,
+               names_to="variable",
+               values_to="values")
+people_pov_risk
+a <- ggplot(people_pov_risk, aes(x=reorder(Regione,people_pov_risk$`Persone a rischio povertà o esclusione sociale`),y=values, fill = variable)) +
+  geom_bar( stat = "identity")+coord_flip()+
+  theme(legend.position="none",axis.text.x=element_blank())+
+  labs(x="Regions",y="People poverty risk", title="Total number of people at poverty risk (Male and Female)")
+a
+
+p=ggplot(Nuovo_data, aes(x=reorder(Regione, Nuovo_data$Percentuale.spesa.pubblica.per.R.S.sul.PIL),y=Nuovo_data$Percentuale.spesa.pubblica.per.R.S.sul.PIL, fill = Regione)) +
+  geom_bar( stat = "identity")+coord_flip()+
+  theme(legend.position="none",axis.text.x=element_blank())+
+  labs(x="Regions",y="Percentage of public expenduture", title="Percentage of public expenditure in research and development on GDP")
+p
+
+p=ggplot(Nuovo_data, aes(x=reorder(Regione, Nuovo_data$Comuni.con.servizi.infanzia.su.totale.comuni),y=Nuovo_data$Comuni.con.servizi.infanzia.su.totale.comuni, fill = Regione)) +
+  geom_bar( stat = "identity")+coord_flip()+
+  theme(legend.position="none",axis.text.x=element_blank())+
+  labs(x="Regions",y="Number of municipality with childcare services", title="Total number of municipality with childcare services")
+p
+
+
+```
+
+After the elimination of some variables due to redundancy we move on to the correlation matrix representation.
+The variables have been also renamed in order to have a better representation in the correlation matrix.
+In the following paragraph variables have also been tested for multivariate normality.
+
+```{r}
+##Rename all the variables
+colnames(Nuovo_data)
+Pers_grave_dep=Nuovo_data[,9]
+Data_sen=Nuovo_data[,-9]
+colnames(Data_sen)
+Pers_risch_pov=Nuovo_data[,16]
+Data_sen=Data_sen[,-16]
+colnames(Data_sen)
+
+##Rename the variables:
+colnames(Data_sen)
+colnames(Data_sen)[2]="Infanzia_com"
+colnames(Data_sen)[3]="Anziani_ass_int"
+colnames(Data_sen)[4]="Fem_ric_occ"
+colnames(Data_sen)[5]="Maschi_ric_occ"
+colnames(Data_sen)[6]="R.S_PIL"
+colnames(Data_sen)[7]="Fem_dep"
+colnames(Data_sen)[8]="Masc_dep"
+colnames(Data_sen)[9]="Reati_ass"
+colnames(Data_sen)[10]="Furti_denun"
+colnames(Data_sen)[11]="Omicid_vol"
+colnames(Data_sen)[12]="Rap_den"
+colnames(Data_sen)[13]="Tasso_scol_sup"
+colnames(Data_sen)[14]="Femm_pov_esc"
+colnames(Data_sen)[15]="Masch_pov_esc"
+colnames(Data_sen)
+
+##Let's test if the variables are normally distributed with Henze-Zirkler test for Multivariate #Normality
+library(mvtnorm)
+library(MVN)
+library(mvnTest)
+HZ.test(Data_sen[,2:15])
+
+
+
+library("corrplot")
+mat=cor(Data_sen[,2:15])
+corrplot(mat)
+corrplot(mat, method="ellipse")
+corrplot(mat, method="number")
+
+##Since we have variables that are very 
+##Since assistenza anziani is not correlate with any variable I delete it from the model
+#While I change the variables that are divided between man and women with their totals
+
+##I delete Anziani ass_int
+Data_sen=as.data.frame(Data_sen)
+colnames(Data_sen)
+Data_sen=Data_sen[,-3]
+Data_sen=Data_sen[,-6]
+Data_sen=Data_sen[,-6]
+colnames(Data_sen)
+Data_sen=Data_sen[,-11]
+Data_sen=Data_sen[,-11]
+colnames(Data_sen)
+Data_sen=cbind(Data_sen,Pers_grave_dep)
+Data_sen=cbind(Data_sen,Pers_risch_pov)
+colnames(Data_sen)
+
+
+
+##Correlation matrix
+library("corrplot")
+mat=cor(Data_sen[,2:12])
+corrplot(mat,) 
+corrplot(mat, method="ellipse")
+corrplot(mat, method="number")
+
+### Boxplot
+
+boxplot(Data_sen$Infanzia_com)
+boxplot(Data_sen$Fem_ric_occ)
+boxplot(Data_sen$Maschi_ric_occ)
+boxplot(Data_sen$R.S_PIL)
+boxplot(Data_sen$Reati_ass)
+boxplot(Data_sen$Reati_ass)$out
+#17 #BASILICATA
+max(Data_sen$Reati_ass)
+min(Data_sen$Reati_ass) #0.81
+which(Data_sen$Reati_ass==0.81)  #2
+Data_sen[2,]
+#Valle D'aosta
+boxplot(Data_sen$Furti_denun)
+boxplot(Data_sen$Omicid_vol)
+boxplot(Data_sen$Omicid_vol)$out
+#2.23 3.48
+Data_sen$Omicid_vol
+#15 18
+Data_sen[c(15,18),]
+#Campania, Calabria
+
+boxplot(Data_sen$Rap_den)
+boxplot(Data_sen$Rap_den)$out
+which(Data_sen$Rap_den==2.75)
+#15
+Data_sen[15,]
+#Campania
+boxplot(Data_sen$Tasso_scol_sup)
+boxplot(Data_sen$Tasso_scol_sup)$out
+boxplot(Data_sen$Tasso_scol_sup)$out
+#66.91 67.16 65.15 56.73
+which(Data_sen$Tasso_scol_sup==66.91)
+#15
+which(Data_sen$Tasso_scol_sup==67.16)
+#16
+which(Data_sen$Tasso_scol_sup==65.15)
+#19
+which(Data_sen$Tasso_scol_sup==56.73)
+#20
+Data_sen[c(15,16,19,20),]
+#Campania, Puglia, Sicilia, Sardegna
+
+boxplot(Data_sen$Pers_grave_dep)
+boxplot(Data_sen$Pers_grave_dep)$out
+#830007 795144
+which(Data_sen$Pers_grave_dep==830007)
+#15 Campania
+which(Data_sen$Pers_grave_dep==795144)
+#19 Sicilia
+
+boxplot(Data_sen$Pers_risch_pov)$out
+#1127898 1085760
+which(Data_sen$Pers_risch_pov==1127898)
+#15 Campania
+which(Data_sen$Pers_risch_pov==1085760)
+#19 Sicilia
+
+```
+
+PCA In order to perform the PCA on our data the data have been scaled and the Bartlett test is performed.
+
+```{r}
+#PCA
+##Before let's do the relative value for the two variables which are in absolute value
+colnames(Data_sen)
+is.data.frame(Popolazione_res)
+Data_sen$Pers_risch_pov=Data_sen$Pers_risch_pov/Popolazione_res$Popolazione_residente
+Data_sen$Pers_risch_pov
+colnames(Data_sen)
+Data_sen$Pers_grave_dep=Data_sen$Pers_grave_dep/Popolazione_res$Popolazione_resi
+Data_sen$Pers_grave_dep
+Data_sen$Pers_risch_pov
+#Bartlett's test.
+#Null hypothesis is to test if the variables are orthogonal, so that this means that they are correlated enough to differ from the identity matrix
+#if we reject ho then PCA is suitable
+library(psych)
+cortest.bartlett(mat, nrow(Data_sen))
+#we reject Ho so we can perform PCA
+round(1.757304e-16,4)
+
+
+
+library(tidyverse)
+Label=Data_sen[,1]
+Num=Data_sen[,2:12]
+dta_scaled=scale(Num)
+cor_mat=cor(dta_scaled)
+corrplot(cor_mat)
+library(ggcorrplot)
+ggcorrplot(cor_mat)
+
+#calculate principal components
+PCA <- princomp(cor_mat)
+summary(PCA)
+```
+
+Each component explains a percentage of the total variance in the dataset.
+The first component is able itself to explain 85 % of the total variability, and the second 8% of the total variance.
+The first two components together can explain together the 93 % of the total variability, so they can accurately represent the data.
+What does those two principal component mean?
+the loadings explain the importance of the independent variable in each component.
+The loadings goes from (-1 to 1) A high absolute value means that the variable strongly influence the component, while if the value is close to zero the variable does not influence the component that much.
+The sign explain if the variable is positively or negatively correlated with the component.
+
+```{r}
+PCA$loadings[, 1:2]
+
+```
+
+We can see that most of the variables have a negative value in the first component and that the only value which is close to zero is Research expenditure proportionate to GDP which is actually a little higher in the second component.
+Also theft declared seems to be more correlated with the second component.
+
+let's visualize the importance of each component (eigenvalues)
+
+```{r}
+library("FactoMineR")
+library(factoextra)
+fviz_eig(PCA, addlabels = T)
+
+```
+
+The biplot shows the impact that each attribute has on the principal component
+
+```{r}
+fviz_pca_var(PCA, col.var = "black")
+```
+
+The variables that are grouped together are positively correlated to each other, such as people at poverty risks, people with high deprivation risk and declared theft.
+The higher the distance between the variable and the origin the better that variable is represented.
+(in fact what we have already seen about R.S_GDP is also explained here) The variables that are on the left side of the biplot are negatively correlated with the first principal component
+
+Contribution of each variable:
+
+```{r}
+fviz_cos2(PCA, choice = "var", axes = 1:2)
+
+```
+
+Combining biplot and variable importance
+
+```{r}
+fviz_pca_var(PCA, col.var = "cos2",
+            gradient.cols = c("red", "orange", "blue"),
+            repel = TRUE)
+```
+
+```{r}
+fit=prcomp(dta_scaled)
+biplot(fit)
+```
+
+K-means clustering
+
+```{r}
+library(cluster)
+#HIERARCHICAL CLUSTERING
+Data_num=Data_sen[,2:12]
+labe=Data_sen[,1]
+data_scaled=scale(Data_num)
+#Find the linkage method to use:
+#define linkage methods
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#function to compute agglomerative coefficient
+ac <- function(x) {
+  agnes(data_scaled, method = x)$ac
+}
+
+#calculate agglomerative coefficient for each clustering linkage method
+sapply(m, ac)
+
+
+#average    single  complete      ward 
+#0.5724224 0.4431763 0.6936479 0.8171183
+#ward or complete
+
+#perform hierarchical clustering using Ward's minimum variance
+clu <- agnes(data_scaled, method = "ward")
+
+#produce dendrogram
+pltree(clu, cex = 0.6, hang = -1, main = "Dendrogram") 
+
+##Determine the optimal number of clusters
+#calculate gap statistic for each number of clusters (up to 10 clusters):
+#Which compares the total intra cluster variation for different values of K with their expected values #for a distribution with no cluster
+gap_stat <- clusGap(data_scaled, FUN = hcut, nstart = 30, K.max = 12, B = 50)
+
+#produce plot of clusters vs. gap statistic
+fviz_gap_stat(gap_stat)
+
+clu <- agnes(data_scaled, method = "complete")
+
+#produce dendrogram
+pltree(clu, cex = 0.6, hang = -1, main = "Dendrogram") 
+
+##Determine the optimal number of clusters
+gap_stat <- clusGap(data_scaled, FUN = hcut, nstart = 30, K.max = 12, B = 50)
+
+#produce plot of clusters vs. gap statistic
+fviz_gap_stat(gap_stat)
+
+
+clu <- agnes(data_scaled, method = "average")
+
+#produce dendrogram
+pltree(clu, cex = 0.6, hang = -1, main = "Dendrogram") 
+
+##Determine the optimal number of clusters
+gap_stat <- clusGap(data_scaled, FUN = hcut, nstart = 30, K.max = 12, B = 50)
+
+#produce plot of clusters vs. gap statistic
+fviz_gap_stat(gap_stat)
+
+
+##K-means clustering
+set.seed(123)
+data_scaled=scale(Data_num)
+data_scaled
+head(data_scaled)
+km3 <- kmeans(data_scaled, 3, nstart = 10)
+fviz_nbclust(data_scaled,kmeans,method="wss")+
+  labs(subtitle="Elbow method")
+fviz_nbclust(data_scaled,kmeans,method="silhouette")+
+  labs(subtitle="Silhouette method")
+##2
+km.res <- kmeans(data_scaled, 2, nstart = 50)
+print(km.res)
+km.res$centers
+#Compute the mean of each cluster on the original data
+aggregate(Data_num, by=list(cluster=km.res$cluster), mean)
+#plot
+?fviz_cluster
+fviz_cluster(km.res, data = data_scaled,
+             palette = c("#2E9FDF", "#E7B800"), 
+             geom = "text",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+
+#Plot PCA e kmeans
+eigenvalue <- round(get_eigenvalue(fit), 1)
+variance.percent <- eigenvalue$variance.percent
+head(eigenvalue)
+ind.coord <- as.data.frame(get_pca_ind(fit)$coord)
+library(ggpubr)
+library(ggplot2)
+library(cluster)
+ind.coord$cluster <- factor(km.res$cluster)
+ggscatter(
+  ind.coord, x = "Dim.1", y = "Dim.2", 
+  color = "cluster", palette = "npg", ellipse = TRUE, ellipse.type = "convex", size = 1.5,  legend = "right", ggtheme = theme_bw(),
+  xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
+  ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
+) +
+  stat_mean(aes(color = cluster), size = 4)
+##To attach the cluster to the data
+#dd <- cbind(USArrests, cluster = km.res$cluster)
+
+#Partitioning around medoids is a robust version of kmeans
+pm3=pam(data_scaled,k=3,metric="euclidean",stand=F)
+fviz_nbclust(data_scaled,pam,method="silhouette")+
+  labs(subtitle="Silhouette method")
+#2
+pam.r=pam(data_scaled,2)
+print(pam.r)
+
+fviz_cluster(pam.r, data = data_scaled, 
+             geom = "text",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+##medoids are the object that represent the cluster
+pam.r$medoids
+
+#cluster numbers a vector containing the cluster number of each object
+head(pam.r$clustering)
+
+```
+
+Model Base Clustering
+
+```{r}
+library(mclust)
+head(data_scaled)
+mc <- Mclust(data_scaled)
+summary(mc)
+
+```
+
+The optimal selected model is EEV: that is two components are ellipsoidal with equal column and shape.
+
+Visualizing the model based clustering
+
+```{r}
+##If you use plot(mc) then from the console you can select which graph you want to have
+#plot(mc)
+# BIC values used for choosing the number of clusters
+fviz_mclust(mc, "BIC", palette = "jco")
+#The higher the curve, the better
+# Classification: plot showing the clustering
+fviz_mclust(mc, "classification", geom = "point", 
+            pointsize = 1.5, palette = "jco")
+# Classification uncertainty
+fviz_mclust(mc, "uncertainty", palette = "jco")
+
+##Centers 
+mc$parameters
+
+fviz_cluster(mc,Data_sen[,-1])
+######################################
+#let's force it to be two clusters
+mc <- Mclust(data_scaled, G=2)
+summary(mc)
+##Terrible job one cluster with just one observation
+fviz_mclust(mc, "uncertainty", palette = "jco")
+```
+
+Multidimensional scaling is a way to visualize the similarity of observations in a dataset in an abstract cartesian space
+
+```{r}
+#distance function
+di=dist(data_scaled)
+#Perform multidimensional scaling
+Mds <- cmdscale(di, eig=TRUE, k=2)
+Mds
+
+#Extract the coordinates of multidimensional scaling
+x <- Mds$points[,1]
+y <- Mds$points[,2]
+
+library(magrittr)
+Mds=data.frame(Mds$points)
+colnames(Mds) <- c("Dim.1", "Dim.2")
+ggscatter(Mds, x="Dim.1" , y="Dim.2", 
+          label = rownames(dta_scaled),
+          size = 1,
+          repel = TRUE)
+
+```
+
+Positive correlated object are close together on the same side of the plot, as we can see on the left side of the plot.
+
+PCA is more focused on the dimensions themselves, and seek to maximize explained variance, whereas MDS is more focused on relations among the scaled objects.
+
+MDS projects n-dimensional data points to a (commonly) 2-dimensional space such that similar objects in the n-dimensional space will be close together on the two dimensional plot, while PCA projects a multidimensional space to the directions of maximum variability using covariance/correlation matrix to analyze the correlation between data points and variables.
+
+While Mds uses the similarity matrix to plot the graph PCA uses the original data
+
+Plot with respect to the cluster
+
+```{r}
+clust=pam.r$clustering%>%as.factor()
+mds=Mds%>%mutate(groups=clust)
+
+ggscatter(mds,x="Dim.1",y="Dim.2",
+          color="groups",
+          palette="Jco",
+          size=1,
+          ellipse=T,
+          ellipse.type = "convex",
+          repel=T)
+
+```
+
+Then we add the clusters to the data:
+
+```{r}
+dd <- cbind(Data_sen, cluster = pam.r$cluster)
+head(dd)
+as.factor(dd$cluster)
+```
+
+To check if there is really a difference between those groups I am going to perform a Manova: it is the multivariate analysis of the variance
+
+```{r}
+res.man <- manova(cbind(dd$Infanzia_com, dd$Fem_ric_occ,dd$Reati_ass,dd$Furti_denun, dd$Tasso_scol_sup,dd$Pers_risch_pov,dd$Pers_grave_dep) ~ dd$cluster, data = dd)
+summary(res.man)
+```
+
+We reject the null hypothesis so the groups are different with respect to the value of those variables.
+
+round(1.006e-07,3)
