@@ -15,4 +15,5 @@ Project overview:
 - Conclusion and further improvements
 
 In this repository, there is a presentation that contains plots, the main conclusion, and other improvements that can be implemented. <br />
+For any suggestion or question, please write to: alessia.leofolliero@gmail.com
 
